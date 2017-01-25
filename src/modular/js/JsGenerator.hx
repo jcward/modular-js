@@ -138,6 +138,11 @@ class JsGenerator
 	}
 
 	public function getTypeFromPath(origName: String) {
+		// Caused by @:native('Object'), I think... Object is a JS global...
+		if (origName=="Object") {
+			return "Object";
+		}
+
 		if (isJSRequire(origName)) {
 			addDependency(origName);
 			return '/* "$origName" */';
