@@ -42,7 +42,7 @@ class Klass extends Module implements IKlass {
 ::end::::foreach members::  ::propertyAccessName::: ::code::,
 ::end:: __class__: ::className::
 }::if (superClass != null)::)::end::;
-::className::.__name__ = "::path::";::end::
+::className::.__name__ = ::pathArray::;::end::
 ::foreach statics::::className::::fieldAccessName:: = ::code::;
 ::end::::if (init)::::init::
 ::end::
@@ -64,6 +64,7 @@ class Klass extends Module implements IKlass {
             overrideBase: gen.isJSExtern(name),
             className: name,
             path: path,
+            pathArray: haxe.Json.stringify(path.split(".")),
             code: code,
             init: if (!globalInit && init != "") init else "",
             useHxClasses: gen.hasFeature('Type.resolveClass') || gen.hasFeature('Type.resolveEnum'),
