@@ -1,0 +1,9 @@
+-cmd rm -rf bin; mkdir -p bin
+-cmd cp index.html bin
+
+--next
+-main Test.hx
+-cp .
+-cp ../../src
+--macro modular.js.JsGenerator.use()
+-js bin/out.js
