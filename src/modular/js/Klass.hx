@@ -18,6 +18,7 @@ class Klass extends Module implements IKlass {
     public var superClass:String = null;
     public var interfaces:Array<String> = new Array();
     public var properties:Array<String> = new Array();
+    public var not_real_variables:Array<String> = new Array();
 
     public function isEmpty() {
         return code.trim() == "" && !members.keys().hasNext() && init.trim() == "";
@@ -38,7 +39,7 @@ class Klass extends Module implements IKlass {
 ::end::::if (superClass != null)::::className::.__super__ = ::superClass::;
 ::className::.prototype = $$extend(::superClass::.prototype, {
 ::else::::className::.prototype = {
-::end::::if (propertyString != "")::    "__properties__": {::propertyString::},
+::end::::if (propertyString != "")::    "__properties__": ::propertyString::,
 ::end::::foreach members::  ::propertyAccessName::: ::code::,
 ::end:: __class__: ::className::
 }::if (superClass != null)::)::end::;
@@ -60,6 +61,18 @@ class Klass extends Module implements IKlass {
             return f;
         }
 
+        // Properties must $extend super.prototype.__properties__ to
+        // allow Reflect.setProperty to utilize a setter method
+        var superHasProperties = superClass!=null;
+        var propertyObjectString = '{'+[for (prop in properties) '"$prop":"$prop"'].join(',')+'}';
+        var propertyString = superHasProperties ?
+          '$$extend($superClass.prototype.__properties__,$propertyObjectString)' :
+          propertyObjectString;
+
+        // Technically this will generate empty __properties__ objects on all
+        // classes, and expects all supers to have __properties__, which seems
+        // to be fine.
+
         var data = {
             overrideBase: gen.isJSExtern(name),
             className: name,
@@ -71,8 +84,8 @@ class Klass extends Module implements IKlass {
             dependencies: [for (key in dependencies.keys()) key],
             interfaces: interfaces.join(','),
             superClass: superClass,
-            propertyString: [for (prop in properties) '"$prop":"$prop"'].join(','),
-            members: [for (member in members.iterator()) filterMember(member)].filter(function(m) { return !m.isStatic; }),
+            propertyString: propertyString,
+            members: [for (member in members.iterator()) filterMember(member)].filter(function(m) { return !m.isStatic && !(not_real_variables.indexOf(m.name)>=0); }),
             statics: [for (member in members.iterator()) filterMember(member)].filter(function(m) { return m.isStatic; })
         };
         return t.execute(data);
@@ -82,14 +95,25 @@ class Klass extends Module implements IKlass {
         gen.checkFieldName(c, f);
         gen.setContext(path + '.' + f.name);
 
-        if(f.name.indexOf("get_") == 0 || f.name.indexOf("set_") == 0)
-        {
-            properties.push(f.name);
-        }
         switch( f.kind )
         {
-            case FVar(r, _):
-                if( r == AccResolve ) return;
+            case FVar(acc_get, acc_set):
+                // If a variable defines a getter or a setter, those getter/setters
+                // are expected properties
+                if( acc_get == AccCall ) properties.push("get_"+f.name);
+                if( acc_set == AccCall ) properties.push("set_"+f.name);
+
+                // Must check metadata to tell the difference between:
+                // @:isVar public var yes_real_var(get,set):String;
+                //         public var not_real_var(get,set):String;
+                var var_is_real = acc_get==AccNormal || acc_set==AccNormal || acc_get==AccNo || acc_set==AccNo ||
+                  // Search for @:isVar metadata (not sure why f.meta.has(':isVar') isn't working)
+                  ((f.meta.get().filter(function(me) { return me.name==':isVar'; }).length>0));
+
+                if (!var_is_real) not_real_variables.push(f.name);
+
+                if( acc_get == AccResolve ) return;
+
             default:
         }
 
