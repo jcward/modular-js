@@ -80,18 +80,30 @@ define([::dependencyNames::],
         }
 
         var depKeys = [for (k in dependencies.keys()) k];
+        var depVars = [for (k in depKeys) k.replace('.', '_').replace('/', '_')];
         var preData = {
             packageName: name,
             dependencyNames: depKeys.map(getDependencyName).join(', '),
-            dependencyVars: [for (k in depKeys) k.replace('.', '_').replace('/', '_')].join(', '),
+            dependencyVars: depVars.map(getDependencyVar).join(', '),
         };
         code = pre.execute(preData) + code;
 
         return code;
     }
 
+    function getDependencyVar(dependency:String)
+    {
+        if (gen.isNamespaceDependency(dependency)) {
+            return gen.namespaceDependencyName(dependency);
+        }
+        return dependency;
+    }
+
     function getDependencyName(dependency:String)
     {
+        if (gen.isNamespaceDependency(dependency)) {
+            return gen.api.quoteString(gen.namespaceDependencyName(dependency));
+        }
         if (gen.isJSRequire(dependency))
             return gen.api.quoteString(gen.requireNames.get(dependency).module);
         var depth = path.split('.').length - 1;

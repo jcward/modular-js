@@ -31,6 +31,7 @@ class JsGenerator
 	var baseJSModules : haxe.ds.StringMap<Bool>;
 	public var currentContext = new Array<String>();
 	public var requireNames = new StringMap<{module:String, path:Array<String>}>();
+	public var requireNamespaces = new StringMap<String>();
 	var dependencies: StringMap<String> = new StringMap();
 	var assumedFeatures: StringMap<Bool> = new StringMap();
 
@@ -43,10 +44,20 @@ class JsGenerator
 	var jsStubPath:String;
 	var outputDir:String;
 
+	// JS namespaces -- for a set of externs in a namespace, e.g. @:native('PIXI.Matrix')
+	// by specifying a namespace name of PIXI (-D RequireNamespaces=PIXI), this will generate
+	// a require for 'PIXI', and leave the local var PIXI.Matrix.
+	var jsRequireNamespaces:Array<String>;
+	static inline var NAMESPACE_PREFIX = "NAMESPACE::";
+
 	public function new(api) {
 		this.api = api;
 
 		curBuf = mainBuf;
+
+		// Namespaces: -D RequireNamespaces=PIXI,riot
+		var namespaceDef = haxe.macro.Compiler.getDefine("RequireNamespaces");
+		jsRequireNamespaces = namespaceDef==null ? [] : namespaceDef.split(',');
 
 		api.setTypeAccessor(getType);
 
@@ -104,9 +115,18 @@ class JsGenerator
 					var require = Lambda.find(c.get().meta.get(), function (meta) return meta.name == ':jsRequire');
 					if (require != null)
 					{
-						var path = require.params.map(haxe.macro.ExprTools.getValue);
+						var path:Array<String> = require.params.map(haxe.macro.ExprTools.getValue);
 						var module = path.shift();
 						requireNames.set(name, {module:module, path:path});
+					} else if (name.indexOf('.')>0 || jsRequireNamespaces.indexOf(name)>=0) {
+						var reqPkg = name.split('.')[0];
+						if (jsRequireNamespaces.indexOf(reqPkg)>=0) {
+							//trace("----------- Setting: "+name+", "+reqPkg);
+							requireNamespaces.set(name, reqPkg);
+						}
+					} else {
+						if( ["Math", "Number", "Array", "String", "Object", "RegExp", "JSON", "Error", "Promise", "XMLHttpRequest", "Date", "HTMLElement", "Uint8Array", "ArrayBuffer", "CustomEvent"].indexOf(name)<0)
+							trace("Warning, extern for which there is no jsRequire: "+name+" at "+c.get().pos);
 					}
 					externNames.set(name, true);
 				}
@@ -129,6 +149,18 @@ class JsGenerator
 		return getTypeFromPath(origName);
 	}
 
+	public function isNamespaceDependency(name: String): Bool {
+		return (name.indexOf(NAMESPACE_PREFIX)==0);
+	}
+
+	public function namespaceDependencyName(name: String): String {
+		return name.substr(NAMESPACE_PREFIX.length);
+	}
+
+	public function isJSRequireNamespace(name: String): Bool {
+		return requireNamespaces.exists(name);
+	}
+
 	public function isJSRequire(name: String): Bool {
 		return requireNames.exists(name);
 	}
@@ -145,6 +177,10 @@ class JsGenerator
 
 		if (isJSRequire(origName)) {
 			addDependency(origName);
+			return '/* "$origName" */';
+		}
+		else if (isJSRequireNamespace(origName)) {
+			addDependency(NAMESPACE_PREFIX+requireNamespaces.get(origName));
 			return '/* "$origName" */';
 		}
 		else if (isJSExtern(origName)) {
@@ -299,6 +335,8 @@ class JsGenerator
 			if (dep.path.length > 0)
 				type += '.' + dep.path.join('.');
 			return type;
+		} else if (isJSRequireNamespace(m)) {
+			return m;
 		} else if (pack.dependencies.exists(m)) {
 			var depPack = packages.get(m);
 
