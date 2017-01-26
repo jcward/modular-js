@@ -22,8 +22,7 @@ class EnumModule extends Module implements IKlass {
         return code == "" && !members.keys().hasNext() && init.trim() == "";
     }
 
-    public function getCode() {
-        var t = new haxe.Template('
+  private static var tmpl = new haxe.Template('
 // Enum: ::path::
 ::if (dependencies.length > 0)::
 // Dependencies:
@@ -37,6 +36,8 @@ var ::enumName:: = { __ename__ : [::names::], __constructs__ : [::constructs::] 
 ::enumName::::fieldAccessName:: = ::code::;
 ::end::
 ');
+
+    public function getCode() {
         function filterMember(member:IField) {
             var f = new EnumModuleField(gen);
             f.name = member.name;
@@ -55,7 +56,7 @@ var ::enumName:: = { __ename__ : [::names::], __constructs__ : [::constructs::] 
             members: [for (member in members.iterator()) filterMember(member)]
         };
 
-        return t.execute(data);
+        return tmpl.execute(data);
     }
 
     public function addField(e: EnumType, construct: EnumField) {

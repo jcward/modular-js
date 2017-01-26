@@ -3,11 +3,15 @@ package modular.js;
 using StringTools;
 
 class MainPackage extends Package {
-	public override function getCode() {
-		var pre = new haxe.Template('// Package: ::packageName::
+  private static var pre = new haxe.Template('// Package: ::packageName::
 require([::dependencyNames::],
 	    function (::dependencyVars::) {
 ');
+  private static var post = new haxe.Template('
+});
+');
+
+	public override function getCode() {
 
 		//  Collect the package's dependencies into one array
 		var allDeps = new haxe.ds.StringMap();
@@ -23,9 +27,6 @@ require([::dependencyNames::],
 
 		_code += '\t$code';
 
-		var post = new haxe.Template('
-});
-');
 		_code += post.execute(data);
 		return _code;
 	}

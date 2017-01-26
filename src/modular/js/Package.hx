@@ -28,11 +28,22 @@ class Package extends Module implements IPackage {
         }
     }
 
-    public function getCode() {
-        var pre = new haxe.Template('// Package: ::packageName::
+  private static var pre = new haxe.Template('// Package: ::packageName::
 define([::dependencyNames::],
        function (::dependencyVars::) {
 ');
+
+  private static var post_single = new haxe.Template('return ::singleMember::;
+});
+');
+
+  private static var post_multi = new haxe.Template('return {
+        ::members::
+    };
+});
+');
+
+    public function getCode() {
 
         //  Collect the package's dependencies into one array
         var allDeps = new StringMap();
@@ -58,15 +69,9 @@ define([::dependencyNames::],
 
         if (memberValues.length == 1) {
             data.singleMember = memberValues[0].name;
-            post = new haxe.Template('return ::singleMember::;
-});
-');
+            post = post_single;
         } else {
-            post = new haxe.Template('return {
-        ::members::
-    };
-});
-');
+            post = post_multi;
         }
 
         code += post.execute(data);
