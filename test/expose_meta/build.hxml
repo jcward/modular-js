@@ -1,0 +1,18 @@
+-cmd rm -rf bin; mkdir -p bin
+-cmd cp index.html bin
+
+--next
+-main Test.hx
+-cp .
+-cp ../../src
+--macro modular.js.JsGenerator.use()
+-js bin/out.js
+
+--next
+-main Test.hx
+-cp .
+-js bin/monolithic.js
+
+--next
+-cmd echo 'Node (default generator):'
+-cmd node bin/monolithic.js

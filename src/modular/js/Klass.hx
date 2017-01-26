@@ -14,6 +14,8 @@ using modular.js.StringExtender;
 class Klass extends Module implements IKlass {
     public var members: StringMap<IField> = new StringMap();
     public var init = "";
+    public var exposeMetaSetup = null;
+    public var exposeMetaAssign = "";
 
     public var superClass:String = null;
     public var interfaces:Array<String> = new Array();
@@ -33,8 +35,9 @@ class Klass extends Module implements IKlass {
 //  ::__current__::
     ::end::
 ::end::
+::if (exposeMetaSetup != null)::::exposeMetaSetup::::end::
 ::if (overrideBase)::::if (useHxClasses)::$$hxClasses["::path::"] = ::className::::end::
-::else::var ::className:: = ::if (useHxClasses == true)::$$hxClasses["::path::"] = ::end::::code::;
+::else::var ::className:: ::exposeMetaAssign::= ::if (useHxClasses == true)::$$hxClasses["::path::"] = ::end::::code::;
 ::if (interfaces != "")::::className::.__interfaces__ = [::interfaces::];
 ::end::::if (superClass != null)::::className::.__super__ = ::superClass::;
 ::className::.prototype = $$extend(::superClass::.prototype, {
@@ -85,6 +88,8 @@ class Klass extends Module implements IKlass {
             interfaces: interfaces.join(','),
             superClass: superClass,
             propertyString: propertyString,
+            exposeMetaSetup: exposeMetaSetup,
+            exposeMetaAssign: exposeMetaAssign,
             members: [for (member in members.iterator()) filterMember(member)].filter(function(m) { return !m.isStatic && !(not_real_variables.indexOf(m.name)>=0); }),
             statics: [for (member in members.iterator()) filterMember(member)].filter(function(m) { return m.isStatic; })
         };
@@ -177,6 +182,18 @@ class Klass extends Module implements IKlass {
 
             for( f in c.statics.get() ) {
                 addStaticField(c, f);
+            }
+
+            if (c.meta.has(":expose")) {
+              var path:Array<String> = ExprTools.getValue( c.meta.extract(":expose")[0].params[0] ).split('.');
+              var cur = "$hx_exports";
+              exposeMetaSetup = "var $hx_exports = (typeof exports != \"undefined\" ? exports : typeof window != \"undefined\" ? window : typeof self != \"undefined\" ? self : this);\n";
+              var last = path.pop();
+              for (leg in path) {
+                cur += '["$leg"]';
+                exposeMetaSetup += '$cur = $cur || {};\n';
+              }
+              exposeMetaAssign = '= $cur["$last"] ';
             }
         }
     }
