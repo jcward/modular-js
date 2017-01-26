@@ -24,8 +24,7 @@ class Klass extends Module implements IKlass {
         return code.trim() == "" && !members.keys().hasNext() && init.trim() == "";
     }
 
-    public function getCode() {
-        var t = new haxe.Template('
+  private static var tmpl = new haxe.Template('
 // Class: ::path::
 ::if (dependencies.length > 0)::
 // Dependencies:
@@ -48,6 +47,8 @@ class Klass extends Module implements IKlass {
 ::end::::if (init)::::init::
 ::end::
 ');
+
+    public function getCode() {
         function filterMember(member:IField) {
             var f = new Field(gen);
             f.name = member.name;
@@ -88,7 +89,7 @@ class Klass extends Module implements IKlass {
             members: [for (member in members.iterator()) filterMember(member)].filter(function(m) { return !m.isStatic && !(not_real_variables.indexOf(m.name)>=0); }),
             statics: [for (member in members.iterator()) filterMember(member)].filter(function(m) { return m.isStatic; })
         };
-        return t.execute(data);
+        return tmpl.execute(data);
     }
 
     public function addField(c: ClassType, f: ClassField) {

@@ -13,12 +13,13 @@ class EnumModuleField extends Module implements IField {
     var argNames:String;
     public var fieldAccessName:String;
 
-    public function getCode() {
-        var t = new haxe.Template('function(::argNames::) {
+  private static var tmpl = new haxe.Template('function(::argNames::) {
     var $$x = [::quoteName::,::index::::if (isFunction)::,::argNames::::end::];
     $$x.__enum__ = ::enumName::;
     return $$x;
 }::if (!isFunction)::()::end::');
+
+    public function getCode() {
 
         var enumNameElements = enumName.split('.');
         var data = {
@@ -29,7 +30,7 @@ class EnumModuleField extends Module implements IField {
             quoteName: gen.api.quoteString(name)
         };
 
-        return t.execute(data);
+        return tmpl.execute(data);
     }
 
     public function build(e: EnumField, classPath:String) {
