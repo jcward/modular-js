@@ -12,6 +12,7 @@ using modular.js.StringExtender;
 
 
 class Klass extends Module implements IKlass {
+    public var member_order:Array<String> = [];
     public var members: StringMap<IField> = new StringMap();
     public var init = "";
 
@@ -86,8 +87,8 @@ class Klass extends Module implements IKlass {
             interfaces: interfaces.join(','),
             superClass: superClass,
             propertyString: propertyString,
-            members: [for (member in members.iterator()) filterMember(member)].filter(function(m) { return !m.isStatic && !(not_real_variables.indexOf(m.name)>=0); }),
-            statics: [for (member in members.iterator()) filterMember(member)].filter(function(m) { return m.isStatic; })
+            members: [for (member in member_order) filterMember(members.get(member))].filter(function(m) { return !m.isStatic && !(not_real_variables.indexOf(m.name)>=0); }),
+            statics: [for (member in member_order) filterMember(members.get(member))].filter(function(m) { return m.isStatic; })
         };
         return tmpl.execute(data);
     }
@@ -123,6 +124,7 @@ class Klass extends Module implements IKlass {
         for (dep in field.dependencies.keys()) {
             addDependency(dep);
         }
+        member_order.push(f.name);
         members.set(f.name, field);
     }
 
@@ -135,6 +137,7 @@ class Klass extends Module implements IKlass {
         for (dep in field.dependencies.keys()) {
             addDependency(dep);
         }
+        member_order.push(field.name);
         members.set(field.name, field);
     }
 

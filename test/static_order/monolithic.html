@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+     body { padding: 0; margin: 0; background-color: #333; }
+     .log {
+       font-family: monospace;
+       background-color: #333;
+       color: #9eb;
+       padding: 5px;
+     }
+    </style>
+  </head>
+<body>
+</body>
+  <script>
+   var console = {};
+   var logdiv = document.createElement('div');
+   logdiv.className = "log";
+   document.body.appendChild(logdiv);
+   console.log = function(s) {
+     logdiv.innerText += s+"\n";
+   }
+  </script>
+  <script src="bin/monolithic.js"></script>
+</html>
